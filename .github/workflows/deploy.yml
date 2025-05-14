@@ -62,3 +62,6 @@ jobs:
               --name bosheth-archiver \
               -p 1222:3000 \
               crpi-4lb4yrqwonqicstn.cn-beijing.personal.cr.aliyuncs.com/lshbosheth/bosheth-archiver:${{ github.sha }}
+            
+            # 删除未使用镜像
+            docker system prune -a -f
