@@ -28,13 +28,15 @@ jobs:
 
     steps:
       - name: Deploy to server
-        uses: appleboy/ssh-action@v0.1.2
+        uses: cross-the-world/ssh-scp-ssh-pipelines@latest
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSHKEY }}
-          script: |
+          password: ${{ secrets.PASSWORD }}
+          command: |
             docker pull lshbosheth/archiver:${{ github.sha }}
             docker stop archiver || true
             docker rm archiver || true
             docker run -d --name archiver -p 3000:3000 lshbosheth/archiver:${{ github.sha }}
+
+          user: ''
