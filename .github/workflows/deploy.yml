@@ -41,16 +41,14 @@ jobs:
 
     steps:
       - name: Deploy to server
-        uses: cross-the-world/ssh-scp-ssh-pipelines@latest
+        uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
-          command: |
+          script: |
             # 登录阿里云 ACR
-            docker login crpi-4lb4yrqwonqicstn.cn-beijing.personal.cr.aliyuncs.com \
-              -u ${{ secrets.ALIYUN_ACR_USERNAME }} \
-              -p ${{ secrets.ALIYUN_ACR_PASSWORD }}
+            echo "${{ secrets.ALIYUN_ACR_PASSWORD }}" | docker login crpi-4lb4yrqwonqicstn.cn-beijing.personal.cr.aliyuncs.com -u ${{ secrets.ALIYUN_ACR_USERNAME }} --password-stdin
 
             # 拉取最新镜像
             docker pull crpi-4lb4yrqwonqicstn.cn-beijing.personal.cr.aliyuncs.com/lshbosheth/bosheth-archiver:${{ github.sha }}
@@ -64,4 +62,3 @@ jobs:
               --name bosheth-archiver \
               -p 1222:3000 \
               crpi-4lb4yrqwonqicstn.cn-beijing.personal.cr.aliyuncs.com/lshbosheth/bosheth-archiver:${{ github.sha }}
-          user: ''
