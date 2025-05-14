@@ -1,30 +1,43 @@
-name: Build and Deploy
+name: Build, Push to ACR and Deploy
 
 on:
   push:
     branches:
-      - master
+      - master # 当推送到 master 分支时触发
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
+    name: Build and Push to ACR
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Log in to Docker Hub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Log in to Alibaba Cloud ACR
+        run: |
+          docker login crpi-4lb4yrqwonqicstn.cn-beijing.personal.cr.aliyuncs.com \
+            -u ${{ secrets.ALIYUN_ACR_USERNAME }} \
+            --password-stdin <<< "${{ secrets.ALIYUN_ACR_PASSWORD }}"
 
       - name: Build the Docker image
-        run: docker build . -t lshbosheth/archiver:${{ github.sha }}
+        run: |
+          docker build . -t crpi-4lb4yrqwonqicstn.cn-beijing.personal.cr.aliyuncs.com/lshbosheth/bosheth-archiver:${{ github.sha }}
 
-      - name: Push the Docker image
-        run: docker push lshbosheth/archiver:${{ github.sha }}
+      - name: Tag as latest
+        run: |
+          docker tag crpi-4lb4yrqwonqicstn.cn-beijing.personal.cr.aliyuncs.com/lshbosheth/bosheth-archiver:${{ github.sha }} \
+                crpi-4lb4yrqwonqicstn.cn-beijing.personal.cr.aliyuncs.com/lshbosheth/bosheth-archiver:latest
+
+      - name: Push to ACR
+        run: |
+          docker push crpi-4lb4yrqwonqicstn.cn-beijing.personal.cr.aliyuncs.com/lshbosheth/bosheth-archiver:${{ github.sha }}
+          docker push crpi-4lb4yrqwonqicstn.cn-beijing.personal.cr.aliyuncs.com/lshbosheth/bosheth-archiver:latest
 
   deploy:
-    needs: build
+    needs: build-and-push
     runs-on: ubuntu-latest
+    name: Deploy to Server via SSH
 
     steps:
       - name: Deploy to server
@@ -34,9 +47,21 @@ jobs:
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
           command: |
-            docker pull lshbosheth/archiver:${{ github.sha }}
-            docker stop archiver || true
-            docker rm archiver || true
-            docker run -d --name archiver -p 3000:3000 lshbosheth/archiver:${{ github.sha }}
+            # 登录阿里云 ACR
+            docker login crpi-4lb4yrqwonqicstn.cn-beijing.personal.cr.aliyuncs.com \
+              -u ${{ secrets.ALIYUN_ACR_USERNAME }} \
+              -p ${{ secrets.ALIYUN_ACR_PASSWORD }}
 
+            # 拉取最新镜像
+            docker pull crpi-4lb4yrqwonqicstn.cn-beijing.personal.cr.aliyuncs.com/lshbosheth/bosheth-archiver:${{ github.sha }}
+
+            # 停止并删除旧容器
+            docker stop bosheth-archiver || true
+            docker rm bosheth-archiver || true
+
+            # 启动新容器
+            docker run -d \
+              --name bosheth-archiver \
+              -p 1222:3000 \
+              crpi-4lb4yrqwonqicstn.cn-beijing.personal.cr.aliyuncs.com/lshbosheth/bosheth-archiver:${{ github.sha }}
           user: ''
