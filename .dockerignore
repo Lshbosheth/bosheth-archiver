@@ -1,0 +1,13 @@
+.git
+.gitignore
+README.md
+*.log
+.env
+.env.*
+Dockerfile
+.vscode
+*.md
+npm-debug.log*
+yarn.lock
+dist
+node_modules
